@@ -6,6 +6,10 @@ use Illuminate\Http\Request;
 use App\Models\Todolist;
 use App\Http\Resources\TodolistResource;
 use Exception;
+use Illuminate\Support\Facades\Log;
+use App\Models\Logging;
+use Illuminate\Support\Facades\Auth;
+
 
 class TodolistController extends Controller
 {
@@ -14,9 +18,17 @@ class TodolistController extends Controller
      */
     public function index()
     {
-        $todolist = Todolist::latest()->get();
-        // return response()->json(['data' => $todolist], 200);
-        return TodolistResource::collection($todolist);
+        try {
+            $todolis = Todolist::latest()->get();
+            Log::info('Todolist success');
+            // return response()->json(['data' => $todolist], 200);
+            return TodolistResource::collection($todolist);
+
+        } catch(Exception $error) {
+            Log::error("Todolist failed " . $error->getMessage());
+            Logging::record(auth()->user()->id,'Todolist failed ' . $error->getMessage());
+            return response()->json(['message' => 'Todolist failed ' . $error->getMessage()], 500);
+        }
     }
 
     /**
@@ -37,7 +49,8 @@ class TodolistController extends Controller
                 'data'=>new TodolistResource($todolist)
         ], 201);
         } catch (Exception $error) {
-            return response()->json(['message'=>'Todolist created failed'], 500);
+            Logging::record(auth()->user()->id,'Todolist created failed' . $error->getMessage());
+            return response()->json(['message'=>'Todolist created failed' . $error->getMessage()], 500);
         }
     }
 
@@ -48,7 +61,8 @@ class TodolistController extends Controller
     {
         $todolist = Todolist::find($id);
         if($todolist == null) {
-            return response()->json(['message' => 'Todolist not found'], 404);
+            Logging::record(auth()->user()->id,'Todolist not found ' . $id);    
+            return response()->json(['message' => 'Todolist not found : '. $id], 404);
         }
         return new TodolistResource($todolist);
     }
@@ -65,7 +79,8 @@ class TodolistController extends Controller
         ]);
         $todolist = Todolist::find($id);
         if($todolist == null) {
-            return response()->json(['message' => 'Todolist not found'], 404);
+            Logging::record(auth()->user()->id,'Todolist not found '. $id);
+            return response()->json(['message' => 'Todolist not found : '. $id], 404);
         }
         try{
             $todolist->update($data);
@@ -74,7 +89,8 @@ class TodolistController extends Controller
                 'data'=>new TodolistResource($todolist)
         ], 201);
         } catch (Exception $error) {
-            return response()->json(['message'=>'Todolist updated failed'], 500);
+            Logging::record(auth()->user()->id,'Todolist updated failed' . $error->getMessage());
+            return response()->json(['message'=>'Todolist updated failed' . $error->getMessage()], 500);
         }
     }
 
@@ -85,7 +101,8 @@ class TodolistController extends Controller
     {
         $todolist = Todolist::find($id);
         if($todolist == null) {
-            return response()->json(['message' => 'Todolist not found'], 404);
+            Logging::record(auth()->user()->id,'Todolist not found : '. $id);
+            return response()->json(['message' => 'Todolist not found : '.$id], 404);
         }
         try{
             $todolist->update($data);
@@ -93,7 +110,8 @@ class TodolistController extends Controller
                 'message'=>'Todolist deleted successfully',
         ], 201);
         } catch (Exception $error) {
-            return response()->json(['message'=>'Todolist deleted failed'], 500);
+            Logging::record(auth()->user()->id,'Todolist deleted failed' . $error->getMessage());
+            return response()->json(['message'=>'Todolist deleted failed'. $error->getMessage()], 500);
         }
     }
 }
