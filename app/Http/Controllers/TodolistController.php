@@ -9,17 +9,19 @@ use Exception;
 use Illuminate\Support\Facades\Log;
 use App\Models\Logging;
 use Illuminate\Support\Facades\Auth;
-
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 class TodolistController extends Controller
 {
+    use AuthorizesRequests;
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
+        // $this->authorize('viewAny', Todolist::class);
         try {
-            $todolis = Todolist::latest()->get();
+            $todolist = Todolist::latest()->where('user_id', auth()->user()->id)->get();
             Log::info('Todolist success');
             // return response()->json(['data' => $todolist], 200);
             return TodolistResource::collection($todolist);
@@ -36,6 +38,7 @@ class TodolistController extends Controller
      */
     public function store(Request $request)
     {
+        $this->authorize('create', Todolist::class);
         $data = $request->validate([
             'title'=> 'required|min:3|max:255',
             'desc'=> 'required|min:3|max:255',
@@ -43,6 +46,7 @@ class TodolistController extends Controller
         ]);
 
         try{
+            $data['user_id'] = auth()->user()->id;
             $todolist = Todolist::create($data);    
             return response()->json([
                 'message'=>'Todolist created successfully',
@@ -60,6 +64,8 @@ class TodolistController extends Controller
     public function show(string $id)
     {
         $todolist = Todolist::find($id);
+        $this->authorize('view', $todolist);
+
         if($todolist == null) {
             Logging::record(auth()->user()->id,'Todolist not found ' . $id);    
             return response()->json(['message' => 'Todolist not found : '. $id], 404);
@@ -72,12 +78,13 @@ class TodolistController extends Controller
      */
     public function update(Request $request, string $id)
     {
+        $todolist = Todolist::find($id);
+        $this->authorize('update', $todolist);
         $data = $request->validate([
             'title'=> 'required|min:3|max:255',
             'desc'=> 'required|min:3|max:255',
             'is_done'=> 'required|in:0,1'
         ]);
-        $todolist = Todolist::find($id);
         if($todolist == null) {
             Logging::record(auth()->user()->id,'Todolist not found '. $id);
             return response()->json(['message' => 'Todolist not found : '. $id], 404);
@@ -100,12 +107,13 @@ class TodolistController extends Controller
     public function destroy(string $id)
     {
         $todolist = Todolist::find($id);
+        $this->authorize('delete', $todolist);
         if($todolist == null) {
             Logging::record(auth()->user()->id,'Todolist not found : '. $id);
             return response()->json(['message' => 'Todolist not found : '.$id], 404);
         }
         try{
-            $todolist->update($data);
+            $todolist->delete($todolist);
             return response()->json([
                 'message'=>'Todolist deleted successfully',
         ], 201);

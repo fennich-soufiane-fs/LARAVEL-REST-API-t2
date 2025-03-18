@@ -11,8 +11,15 @@ class Todolist extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id',
         'title',
         'desc',
         'is_done'
     ];
+
+    
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 }
